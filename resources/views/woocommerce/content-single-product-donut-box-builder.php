@@ -1204,36 +1204,42 @@ function updateBoxDisplay() {
     }
     window.addItemToBox = addItemToBox;
 
-    window.addItemAtSlot = (item, slot) => {
+    const getFlatBoxItems = () => {
       let flat = [];
       boxItems.forEach((i) => {
         for (let k = 0; k < i.quantity; k++) flat.push({ ...i });
       });
-      flat.splice(slot, 0, { ...item, quantity: 1 });
+      return flat;
+    };
+
+    const rebuildBoxItemsFromFlat = (flat) => {
       const map = {};
+      const order = [];
       flat.forEach((u) => {
-        if (!map[u.id]) map[u.id] = { ...u, quantity: 0 };
+        if (!map[u.id]) {
+          map[u.id] = { ...u, quantity: 0 };
+          order.push(u.id);
+        }
         map[u.id].quantity++;
       });
-      boxItems = Object.values(map);
+      boxItems = order.map((id) => map[id]);
+    };
+
+    window.addItemAtSlot = (item, slot) => {
+      const flat = getFlatBoxItems();
+      flat.splice(slot, 0, { ...item, quantity: 1 });
+      rebuildBoxItemsFromFlat(flat);
       afterMutation();
+      updateAddButton(item.id);
     };
 
     window.removeItemAtSlot = (slot) => {
-      let flat = [];
-      boxItems.forEach((i) => {
-        for (let k = 0; k < i.quantity; k++) flat.push({ ...i });
-      });
+      const flat = getFlatBoxItems();
       let removed = null;
       if (slot >= 0 && slot < flat.length) {
         removed = flat.splice(slot, 1)[0];
       }
-      const map = {};
-      flat.forEach((u) => {
-        if (!map[u.id]) map[u.id] = { ...u, quantity: 0 };
-        map[u.id].quantity++;
-      });
-      boxItems = Object.values(map);
+      rebuildBoxItemsFromFlat(flat);
       afterMutation();
       if (removed) updateAddButton(removed.id);
     };
