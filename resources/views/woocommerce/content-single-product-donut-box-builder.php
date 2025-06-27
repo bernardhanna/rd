@@ -1159,12 +1159,12 @@ function updateBoxDisplay() {
         btn.className = "absolute top-0 right-0 bg-red-500 text-white px-2 py-1 z-50";
         btn.innerHTML =
           '<svg width="24" height="24" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><g fill="#f55959" stroke="#000" stroke-linecap="round" stroke-linejoin="round" transform="translate(2 2)"><circle cx="8.5" cy="8.5" r="8"></circle><g transform="matrix(0 1 -1 0 17 0)"><path d="m5.5 11.5 6-6"></path><path d="m5.5 5.5 6 6"></path></g></g></svg>';
-        // Attach the specific item ID to the button for removal
-        btn.onclick = (function (current_item_id) {
-          return function() {
-            removeOneItemFromBox(current_item_id);
+        // Remove the item at this specific slot
+        btn.onclick = ((slotIndex) => {
+          return () => {
+            removeItemAtSlot(slotIndex);
           };
-        })(item.id); // Capture item.id for the closure
+        })(i);
         w.appendChild(btn);
       }
     } else {
@@ -1217,6 +1217,25 @@ function updateBoxDisplay() {
       });
       boxItems = Object.values(map);
       afterMutation();
+    };
+
+    window.removeItemAtSlot = (slot) => {
+      let flat = [];
+      boxItems.forEach((i) => {
+        for (let k = 0; k < i.quantity; k++) flat.push({ ...i });
+      });
+      let removed = null;
+      if (slot >= 0 && slot < flat.length) {
+        removed = flat.splice(slot, 1)[0];
+      }
+      const map = {};
+      flat.forEach((u) => {
+        if (!map[u.id]) map[u.id] = { ...u, quantity: 0 };
+        map[u.id].quantity++;
+      });
+      boxItems = Object.values(map);
+      afterMutation();
+      if (removed) updateAddButton(removed.id);
     };
 
     function updateItemInBox(item, qty) {
