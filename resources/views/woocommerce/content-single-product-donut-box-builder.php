@@ -1667,10 +1667,12 @@ function updateBoxDisplay() {
 
                 const emptySlots = mobileSlotData.filter(x => x === null).length;
 
-                if (emptySlots <= 0 || quantity > emptySlots) {
+                if (emptySlots <= 0) {
                     showToast(item.id); // ✅ Trigger toast message
                     return;
                 }
+
+                quantity = Math.min(quantity, emptySlots);
 
                 for (let i = 0; i < quantity; i++) {
                     const nextSlot = mobileSlotData.findIndex(x => x === null);
