@@ -776,13 +776,13 @@ $disable_add_remove = get_post_meta($product->get_id(), '_donut_box_builder_disa
 
                                 <div class="items-center mx-2 gap-x-4 quantity margin-auto flex justify-space-between">
                              <button class="font-bold minus-btn hidden border-2 border-yellow-primary hover:border-black-full hover:bg-white bg-yellow-primary rounded-full h-[40px] w-[40px]"
-                                data-pid="<?php echo $current_pid; ?>"
+                                data-pid="<?php echo $data['id']; ?>"
                                         aria-label="<?php esc_attr_e('Remove one', 'donut-box-builder'); ?>">
                                 &minus;
                                 </button>
                             <p class="in-box-count text-sm text-gray-600" data-pid="<?php echo $product_item->get_id(); ?>"></p>
                                 <button class="font-bold plus-btn border-2 border-yellow-primary hover:border-black-full hover:bg-white bg-yellow-primary rounded-full h-[40px] w-[40px]"
-                                        data-item='<?php echo esc_attr(wp_json_encode($product_data)); ?>'
+                                        data-item='<?php echo esc_attr(wp_json_encode($data)); ?>'
                                         aria-label="<?php esc_attr_e('Add to box', 'donut-box-builder'); ?>">
                                 +
                                 </button>
