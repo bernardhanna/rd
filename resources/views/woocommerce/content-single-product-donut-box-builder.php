@@ -773,20 +773,31 @@ $disable_add_remove = get_post_meta($product->get_id(), '_donut_box_builder_disa
        <p class="in-box-count text-sm text-gray-600" data-pid="<?php echo $data['id']; ?>"></p>
 
             <div class="items-center mx-4 mt-4 quantity margin-auto flex justify-space-between">
-            <button
-        class="minus-btn decrement-btn hidden h-[40px] w-[40px] flex items-center justify-center bg-yellow-primary rounded-full hover:bg-black-full text-black-full"
-        data-pid="<?php echo $data['id']; ?>"
-        aria-label="<?php esc_attr_e('Remove one', 'donut-box-builder'); ?>">
-        &minus;
-    </button>
-
-    <button
-        class="plus-btn add-to-box-button flex items-center justify-center h-[40px] w-[40px] bg-yellow-primary rounded-full hover:bg-black-full text-black-full"
-        data-item='<?php echo esc_attr( wp_json_encode( $data ) ); ?>'
-        aria-label="<?php esc_attr_e('Add one', 'donut-box-builder'); ?>">
-        +
-    </button>
-    </div>
+                <button
+                    class="minus-btn decrement-btn hidden h-[40px] w-[40px] flex items-center justify-center bg-yellow-primary rounded-full hover:bg-black-full text-black-full"
+                    data-pid="<?php echo $data['id']; ?>"
+                    aria-label="<?php esc_attr_e('Remove one', 'donut-box-builder'); ?>">
+                    &minus;
+                </button>
+                <input
+                    type="number"
+                    id="mobile-product-quantity-<?php echo $data['id']; ?>"
+                    class="mobile-product-quantity border-none product-quantity-input input-text qty text hasQtyButtons mx-2 w-12 text-center"
+                    data-product-id="<?php echo $data['id']; ?>"
+                    step="1"
+                    min="0"
+                    value="0"
+                    title="Qty"
+                    size="4"
+                    inputmode="numeric"
+                    autocomplete="off">
+                <button
+                    class="plus-btn add-to-box-button flex items-center justify-center h-[40px] w-[40px] bg-yellow-primary rounded-full hover:bg-black-full text-black-full"
+                    data-item='<?php echo esc_attr( wp_json_encode( $data ) ); ?>'
+                    aria-label="<?php esc_attr_e('Add one', 'donut-box-builder'); ?>">
+                    +
+                </button>
+            </div>
             </div>
             <?php endforeach; ?>
 
@@ -1094,7 +1105,7 @@ if ($product_id != 3947) echo 'disabled'; ?>>
         counts[i.id] = (counts[i.id] || 0) + i.quantity;
     });
 
-    document.querySelectorAll(".product-quantity-input").forEach((inp) => {
+    document.querySelectorAll(".product-quantity-input, .mobile-product-quantity").forEach((inp) => {
         const pid = parseInt(inp.dataset.productId, 10);
         const wrap = inp.closest(".quantity");
         const qty = counts[pid] || 0;
@@ -1589,6 +1600,9 @@ function updateBoxDisplay() {
         const closeBtn = document.getElementById("mobile-modal-close");
 
         function openMobileModal() {
+            // Ensure mobile view reflects current box state
+            syncFromDesktop();
+
             modal.classList.remove("hidden");
             modalContent.classList.remove("slide-down");
             modalContent.classList.add("slide-up");
@@ -1667,10 +1681,12 @@ function updateBoxDisplay() {
 
                 const emptySlots = mobileSlotData.filter(x => x === null).length;
 
-                if (emptySlots <= 0 || quantity > emptySlots) {
+                if (emptySlots <= 0) {
                     showToast(item.id); // ✅ Trigger toast message
                     return;
                 }
+
+                quantity = Math.min(quantity, emptySlots);
 
                 for (let i = 0; i < quantity; i++) {
                     const nextSlot = mobileSlotData.findIndex(x => x === null);
