@@ -1516,6 +1516,10 @@ if ($product_id != 3947) echo 'disabled'; ?>>
         const closeBtn = document.getElementById("mobile-modal-close");
 
         function openMobileModal() {
+            // ensure product counts are up-to-date when the modal opens
+            if (typeof refreshMiniQuantityInputs === 'function') {
+                refreshMiniQuantityInputs();
+            }
             modal.classList.remove("hidden");
             modalContent.classList.remove("slide-down");
             modalContent.classList.add("slide-up");
