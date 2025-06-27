@@ -1,0 +1,58 @@
+jQuery(document).ready(function ($) {
+  // Show/hide the prefilled products select and allow swapping checkbox based on the checkbox state
+  function togglePrefilledProductsSelect() {
+    if ($('#_box_builder_pre_filled').is(':checked')) {
+      $('#prefilled_products_container').show();
+      $('#allow_swapping_container').show(); // Show the allow swapping checkbox
+    } else {
+      $('#prefilled_products_container').hide();
+      $('#allow_swapping_container').hide(); // Hide the allow swapping checkbox
+    }
+  }
+
+  // Initial call
+  togglePrefilledProductsSelect();
+
+  // Bind the change event for prefilled checkbox
+  $('#_box_builder_pre_filled').change(function () {
+    togglePrefilledProductsSelect();
+  });
+
+  // Fix for not being able to uncheck the checkbox
+  $(document).on('change', '#_box_builder_pre_filled', function () {
+    $(this).val($(this).is(':checked') ? 'yes' : 'no');
+  });
+
+  // Handle adding prefilled products
+  function addPrefilledProduct() {
+    var prefilledProductHtml = `
+            <div class="prefilled-product">
+                <select name="_prefilled_box_products[]" class="prefilled-product-select" style="width: 80%;">
+                    ${$('#custom_box_products option').map(function () { return `<option value="${$(this).val()}">${$(this).text()}</option>`; }).get().join('')}
+                </select>
+                <button type="button" class="remove_prefilled_product button">Remove</button>
+            </div>
+        `;
+    $('#prefilled_products_container').append(prefilledProductHtml);
+    $('.prefilled-product-select').select2(); // Apply select2 for the search functionality
+  }
+
+  // Bind the add prefilled product button
+  $('#add_prefilled_product_top, #add_prefilled_product_bottom').click(function () {
+    addPrefilledProduct();
+  });
+
+  // Handle removing prefilled products
+  $(document).on('click', '.remove_prefilled_product', function () {
+    $(this).closest('.prefilled-product').remove();
+  });
+
+  // Initialize select2 for all prefilled product selects
+  $('.prefilled-product-select').select2();
+
+  // Apply hide-sort-value class
+  $('tr[data-sort-value]').each(function () {
+    $(this).addClass('hide-sort-value');
+  });
+});
+

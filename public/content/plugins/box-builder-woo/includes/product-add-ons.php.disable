@@ -1,0 +1,7 @@
+<?php
+include('add-ons/init.php');
+include('add-ons/admin.php');
+include('add-ons/frontend.php');
+include('add-ons/cart.php');
+include('add-ons/order.php');
+?>

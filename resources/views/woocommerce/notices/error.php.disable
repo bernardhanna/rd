@@ -1,0 +1,37 @@
+<?php
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+if (!$notices) {
+    return;
+}
+
+// Initialize notices session handling
+if (!isset($_SESSION['dismissed_notices'])) {
+    session_start();
+    $_SESSION['dismissed_notices'] = array();
+}
+
+// Get currently dismissed notices
+$dismissed_notices = $_SESSION['dismissed_notices'];
+
+// Filter out dismissed notices
+$active_notices = array_filter($notices, function ($notice) use ($dismissed_notices) {
+    return !in_array(md5(serialize($notice)), $dismissed_notices);
+});
+
+if (!empty($active_notices)) : ?>
+    <div id="custom-woocommerce-error" class="woocommerce-error fixed inset-0 z-50 flex items-center justify-center">
+        <div class="bg-black-full border-2 border-yellow-primary text-white rounded-lg p-6 flex items-center justify-between">
+            <ul>
+                <?php foreach ($active_notices as $notice) : ?>
+                    <li><?php echo wc_kses_notice($notice['notice']); ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <button class="close-all-notices ml-4 bg-red-critical rounded-full px-4 py-2 text-black" aria-label="Close">
+                x
+            </button>
+        </div>
+    </div>
+<?php endif; ?>
