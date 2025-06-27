@@ -982,6 +982,7 @@ if ($product_id != 3947) echo 'disabled'; ?>>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script>
   var boxItems = [];
+  var boxSlots = [];
 
     /* initial draw */
     document.addEventListener('DOMContentLoaded',()=>{
@@ -1063,6 +1064,19 @@ if ($product_id != 3947) echo 'disabled'; ?>>
     let currentAllergens = new Set();
     const sumQty = (a) => a.reduce((t, i) => t + (i ? i.quantity : 0), 0);
 
+    const maxSlots = parseInt(document.getElementById("box-container").dataset.maxQuantity, 10) || 0;
+    boxSlots = new Array(maxSlots).fill(null);
+
+    function recomputeBoxItems() {
+        const map = {};
+        boxSlots.forEach(it => {
+            if (!it) return;
+            if (!map[it.id]) map[it.id] = { ...it, quantity: 0 };
+            map[it.id].quantity++;
+        });
+        boxItems = Object.values(map);
+    }
+
     function refreshMiniQuantityInputs() {
     const counts = {};
     boxItems.forEach((i) => {
@@ -1132,14 +1146,6 @@ function updateBoxDisplay() {
   const max = parseInt(box.dataset.maxQuantity) || 0;
   const ph = box.dataset.placeholderUrl;
 
-  // Create a flattened array of items, including their quantities
-  let flatBoxItems = [];
-  boxItems.forEach(item => {
-    for (let k = 0; k < item.quantity; k++) {
-      flatBoxItems.push(item);
-    }
-  });
-
   // Clear the box container before repopulating
   box.innerHTML = "";
 
@@ -1147,10 +1153,9 @@ function updateBoxDisplay() {
   for (let i = 0; i < max; i++) {
     const w = document.createElement("div");
     w.className = "flex flex-col justify-center items-center box-item p2 relative";
+    const item = boxSlots[i];
 
-    if (i < flatBoxItems.length) {
-      // This slot has an item
-      const item = flatBoxItems[i];
+    if (item) {
       w.classList.add("in-box");
       w.innerHTML = `<img src="${item.thumbnail}" class="box-img" alt="${item.name}"><div class="tooltip">${item.name.replace(/- (Large|Midi|Standard)/, "").trim()}</div>`;
 
@@ -1193,68 +1198,62 @@ function updateBoxDisplay() {
 
 
     function addItemToBox(item, qty = 1) {
-      const max = parseInt(document.getElementById("box-container").dataset.maxQuantity) || 0;
-      if (max && sumQty(boxItems) + qty > max) {
-        showToast(item.id);
-        return;
+      for (let i = 0; i < qty; i++) {
+        const slot = boxSlots.indexOf(null);
+        if (slot === -1) {
+          showToast(item.id);
+          break;
+        }
+        boxSlots[slot] = { ...item };
       }
-      const ex = boxItems.find((i) => i.id === item.id);
-      ex ? (ex.quantity += qty) : boxItems.push({ ...item, quantity: qty });
+      recomputeBoxItems();
       afterMutation();
     }
     window.addItemToBox = addItemToBox;
 
     window.addItemAtSlot = (item, slot) => {
-      let flat = [];
-      boxItems.forEach((i) => {
-        for (let k = 0; k < i.quantity; k++) flat.push({ ...i });
-      });
-      flat.splice(slot, 0, { ...item, quantity: 1 });
-      const map = {};
-      flat.forEach((u) => {
-        if (!map[u.id]) map[u.id] = { ...u, quantity: 0 };
-        map[u.id].quantity++;
-      });
-      boxItems = Object.values(map);
+      if (slot < 0 || slot >= boxSlots.length) return;
+      if (boxSlots[slot]) return;
+      boxSlots[slot] = { ...item };
+      recomputeBoxItems();
       afterMutation();
     };
 
     window.removeItemAtSlot = (slot) => {
-      let flat = [];
-      boxItems.forEach((i) => {
-        for (let k = 0; k < i.quantity; k++) flat.push({ ...i });
-      });
-      let removed = null;
-      if (slot >= 0 && slot < flat.length) {
-        removed = flat.splice(slot, 1)[0];
-      }
-      const map = {};
-      flat.forEach((u) => {
-        if (!map[u.id]) map[u.id] = { ...u, quantity: 0 };
-        map[u.id].quantity++;
-      });
-      boxItems = Object.values(map);
+      if (slot < 0 || slot >= boxSlots.length) return;
+      const removed = boxSlots[slot];
+      boxSlots[slot] = null;
+      recomputeBoxItems();
       afterMutation();
       if (removed) updateAddButton(removed.id);
     };
 
     function updateItemInBox(item, qty) {
       if (!item) return;
-      const idx = boxItems.findIndex((i) => i.id === item.id);
-      if (idx === -1) {
-        if (qty > 0) boxItems.push({ ...item, quantity: qty });
-      } else {
-        if (qty > 0) boxItems[idx].quantity = qty;
-        else boxItems.splice(idx, 1);
+      const current = boxSlots.filter(s => s && s.id === item.id).length;
+      const diff = qty - current;
+      if (diff > 0) {
+        for (let i = 0; i < diff; i++) {
+          const slot = boxSlots.indexOf(null);
+          if (slot === -1) break;
+          boxSlots[slot] = { ...item };
+        }
+      } else if (diff < 0) {
+        for (let i = 0; i < -diff; i++) {
+          const idx = boxSlots.findIndex(s => s && s.id === item.id);
+          if (idx === -1) break;
+          boxSlots[idx] = null;
+        }
       }
+      recomputeBoxItems();
       afterMutation();
     }
 
     function removeOneItemFromBox(pid) {
-    const item = boxItems.find((i) => i.id === pid);
-    if (!item) return;
-    item.quantity--;
-    if (item.quantity <= 0) boxItems = boxItems.filter((i) => i.id !== pid);
+    const idx = boxSlots.findIndex((s) => s && s.id === pid);
+    if (idx === -1) return;
+    boxSlots[idx] = null;
+    recomputeBoxItems();
     afterMutation();
     // ──── NEW ────
     updateAddButton(pid);
@@ -1279,12 +1278,14 @@ function updateBoxDisplay() {
         });
 
         const pre = window.my_script_object?.prefilled_products_data || [];
+        let slotIdx = 0;
         pre.forEach((p) => {
-        const existing = boxItems.find((i) => i.id === p.id);
-        if (existing) existing.quantity += p.quantity || 1;
-        else boxItems.push({ ...p, quantity: p.quantity || 1 });
+        const q = p.quantity || 1;
+        for (let i = 0; i < q && slotIdx < boxSlots.length; i++) {
+            boxSlots[slotIdx++] = { ...p };
+        }
         });
-
+        recomputeBoxItems();
         boxItems.forEach(i => updateInBoxCount(i.id));
 
         refreshMiniQuantityInputs();
@@ -1346,7 +1347,8 @@ function updateBoxDisplay() {
     };
 
   window.clearBoxItems = () => {
-  boxItems = [];
+  boxSlots.fill(null);
+  recomputeBoxItems();
   currentAllergens.clear();
   afterMutation();
   // re-sync every button back to “Add”
@@ -1577,12 +1579,7 @@ function updateBoxDisplay() {
         let activeSlot = null;
         let mobileSlotData = new Array(maxSlots).fill(null);
         function syncFromDesktop() {
-            const tiles = Array.from(boxContainer.querySelectorAll(".in-box")).filter((el) => !el.classList.contains("placeholder"));
-            tiles.slice(0, maxSlots).forEach((el, i) => {
-                const img = el.querySelector("img");
-                const name = el.querySelector(".tooltip")?.textContent.trim() || img.alt;
-                mobileSlotData[i] = { thumbnail: img.src, name };
-            });
+            mobileSlotData = boxSlots.map(it => it ? { thumbnail: it.thumbnail, name: it.name } : null);
         }
         function filledHTML(slot, src, name) {
             return `<li data-slot="${slot}" class="order-b-neutral-200 flex items-center m-0 px-0 py-2.5 border-b border-dotted text-white"><img src="${src}" width="40" height="40" style="object-fit:cover;border-radius:50%;margin-right:10px;" alt="${name}" /><span class="flex-grow">${name}</span><button class="mobile-remove-btn bg-red-btn text-black-full px-4 py-1 rounded-[5px] hover:bg-white">Remove</button></li>`;
@@ -1610,8 +1607,7 @@ function updateBoxDisplay() {
                 btn.onclick = () => {
                     const slot = +btn.closest("li").dataset.slot;
                     mobileSlotData[slot] = null;
-                    const tiles = Array.from(boxContainer.querySelectorAll(".in-box")).filter((el) => !el.classList.contains("placeholder"));
-                    tiles[slot]?.querySelector("button")?.click();
+                    removeItemAtSlot(slot);
                     renderList();
                 };
             });
@@ -1791,14 +1787,15 @@ document.querySelectorAll('#available-products-mobile .minus-btn').forEach(btn =
 
     // 2) In your addItemToBox, call it right after afterMutation():
     function addItemToBox(item, qty = 1) {
-    const max = parseInt(document.getElementById("box-container").dataset.maxQuantity) || 0;
-    if (max && sumQty(boxItems) + qty > max) {
-        showToast(item.id);
-        return;
+    for (let i = 0; i < qty; i++) {
+        const slot = boxSlots.indexOf(null);
+        if (slot === -1) {
+            showToast(item.id);
+            break;
+        }
+        boxSlots[slot] = { ...item };
     }
-    const ex = boxItems.find(i => i.id === item.id);
-    if (ex) ex.quantity += qty;
-    else boxItems.push({ ...item, quantity: qty });
+    recomputeBoxItems();
 
     afterMutation();
     updateAddButton(item.id);
@@ -1806,10 +1803,10 @@ document.querySelectorAll('#available-products-mobile .minus-btn').forEach(btn =
 
     // 3) In your removeOneItemFromBox, do the same:
     function removeOneItemFromBox(pid) {
-    const item = boxItems.find(i => i.id === pid);
-    if (!item) return;
-    item.quantity--;
-    if (item.quantity <= 0) boxItems = boxItems.filter(i => i.id !== pid);
+    const idx = boxSlots.findIndex(s => s && s.id === pid);
+    if (idx === -1) return;
+    boxSlots[idx] = null;
+    recomputeBoxItems();
 
     afterMutation();
     updateAddButton(pid);
