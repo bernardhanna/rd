@@ -1589,6 +1589,9 @@ function updateBoxDisplay() {
         const closeBtn = document.getElementById("mobile-modal-close");
 
         function openMobileModal() {
+            // Ensure mobile view reflects current box state
+            syncFromDesktop();
+
             modal.classList.remove("hidden");
             modalContent.classList.remove("slide-down");
             modalContent.classList.add("slide-up");
