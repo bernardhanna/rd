@@ -256,6 +256,22 @@
 .plus-btn { transition: background .2s ease, transform .15s ease; }
 .plus-btn:hover { transform: scale(1.05); }
 
+@keyframes slideUpBounce {
+    0% { transform: translateY(100%); }
+    60% { transform: translateY(-10px); }
+    80% { transform: translateY(5px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes slideDownBounce {
+    0% { transform: translateY(0); }
+    20% { transform: translateY(-5px); }
+    100% { transform: translateY(100%); }
+}
+
+#mobile-modal-content.slide-up { animation: slideUpBounce 0.5s forwards; }
+#mobile-modal-content.slide-down { animation: slideDownBounce 0.5s forwards; }
+
 </style>
 <?php defined('ABSPATH') || exit;
 
@@ -708,7 +724,7 @@ $disable_add_remove = get_post_meta($product->get_id(), '_donut_box_builder_disa
             class="fixed inset-0 bg-black bg-opacity-75 hidden lg:hidden flex justify-center items-center h-full"
             style="z-index:100000000000;"
         >
-        <div class="bg-white rounded-lg w-full max-w-full overflow-auto p-4 fixed h-[75%] bottom-0 rounded-t-[40px] border-4 border-black overflow-y-scroll">
+        <div id="mobile-modal-content" class="bg-white rounded-lg w-full max-w-full overflow-auto p-4 fixed h-[75%] bottom-0 rounded-t-[40px] border-4 border-black overflow-y-scroll">
             <p class="py-4 relative leading-none text-center pd_title font-reg420 text-mob-md-font">
                Add Flavours to your box!      </p>
             <button id="mobile-modal-close"
@@ -788,11 +804,6 @@ $disable_add_remove = get_post_meta($product->get_id(), '_donut_box_builder_disa
                 const name = card.querySelector('span').textContent.toLowerCase();
                 card.style.display = name.includes(term) ? '' : 'none';
             });
-        });
-        // close modal (already have your existing handlers)
-        document.getElementById('mobile-modal-close').addEventListener('click', () => {
-            document.getElementById('mobile-builder-modal').classList.add('hidden');
-            document.body.style.overflow = '';
         });
         </script>
 
@@ -1574,7 +1585,28 @@ function updateBoxDisplay() {
         const boxContainer = document.getElementById("box-container");
         const clearBtn = document.getElementById("mobile-clear-box");
         const modal = document.getElementById("mobile-builder-modal");
+        const modalContent = document.getElementById("mobile-modal-content");
         const closeBtn = document.getElementById("mobile-modal-close");
+
+        function openMobileModal() {
+            modal.classList.remove("hidden");
+            modalContent.classList.remove("slide-down");
+            modalContent.classList.add("slide-up");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeMobileModal() {
+            modalContent.classList.remove("slide-up");
+            modalContent.classList.add("slide-down");
+            modalContent.addEventListener("animationend", function handler() {
+                modal.classList.add("hidden");
+                document.body.style.overflow = "";
+                modalContent.removeEventListener("animationend", handler);
+            }, { once: true });
+            activeSlot = null;
+        }
+        window.openMobileModal = openMobileModal;
+        window.closeMobileModal = closeMobileModal;
         const maxSlots = parseInt(boxContainer.dataset.maxQuantity, 10) || 0;
         let activeSlot = null;
         let mobileSlotData = new Array(maxSlots).fill(null);
@@ -1614,8 +1646,7 @@ function updateBoxDisplay() {
             listEl.querySelectorAll(".mobile-slot-empty").forEach((el) => {
                 el.onclick = () => {
                     activeSlot = +el.dataset.slot;
-                    modal.classList.remove("hidden");
-                    document.body.style.overflow = "hidden";
+                    openMobileModal();
                 };
             });
             if (clearBtn) {
@@ -1657,8 +1688,7 @@ function updateBoxDisplay() {
 
                 // auto-close modal if full
                 if (!mobileSlotData.includes(null)) {
-                    document.getElementById("mobile-builder-modal").classList.add("hidden");
-                    document.body.style.overflow = "";
+                    closeMobileModal();
                 }
             });
             window.incrementProductQuantity = function(pid) {
@@ -1682,16 +1712,10 @@ function updateBoxDisplay() {
 
 
         }
-        closeBtn.addEventListener("click", () => {
-            modal.classList.add("hidden");
-            document.body.style.overflow = "";
-            activeSlot = null;
-        });
+        closeBtn.addEventListener("click", closeMobileModal);
         modal.addEventListener("click", (e) => {
             if (e.target === modal) {
-                modal.classList.add("hidden");
-                document.body.style.overflow = "";
-                activeSlot = null;
+                closeMobileModal();
             }
         });
         syncFromDesktop();
@@ -1721,8 +1745,7 @@ afterMutation = function() {
   if (max && sumQty(boxItems) >= max) {
     const modal = document.getElementById('mobile-builder-modal');
     if (modal) {
-      modal.classList.add('hidden');
-      document.body.style.overflow = '';
+      window.closeMobileModal ? window.closeMobileModal() : modal.classList.add('hidden');
     }
   }
 };
