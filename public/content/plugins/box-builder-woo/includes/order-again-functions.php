@@ -34,6 +34,10 @@ function custom_order_again_cart_item_data($cart_item_data, $item, $order) {
 
 add_action('woocommerce_after_order_again_cart_item_added', 'add_child_items_to_cart_for_order_again', 10, 3);
 function add_child_items_to_cart_for_order_again($cart_item_key, $item, $order) {
+    if ($item->get_meta('_part_of_box') || $item->get_meta('_parent_item_key')) {
+        WC()->cart->remove_cart_item($cart_item_key);
+        return;
+    }
     // Get selected products from the order item meta
     $selected_products = $item->get_meta('_selected_products') ? explode(', ', $item->get_meta('_selected_products')) : [];
 
@@ -46,7 +50,7 @@ function add_child_items_to_cart_for_order_again($cart_item_key, $item, $order) 
             if (is_numeric($selected_product_id)) {
                 // Add each selected product to the cart as a child item
                 WC()->cart->add_to_cart(intval($selected_product_id), 1, 0, array(), array(
-                    'parent_item_key' => $cart_item_key,  // Link to the main product
+                    'parent_item_key' => $unique_key,  // Link to the main product
                     'part_of_box' => true,
                     'unique_key' => $unique_key,
                 ));
@@ -54,11 +58,6 @@ function add_child_items_to_cart_for_order_again($cart_item_key, $item, $order) 
         }
     }
 }
-
-
-add_action('woocommerce_after_order_again_cart_item_added', function($cart_item_key, $item, $order) {
-    wc_add_notice('Order again process triggered', 'notice');
-}, 10, 3);
 
 /*
 add_action('woocommerce_before_cart', 'dump_cart_contents');
