@@ -9,6 +9,12 @@ function add_metadata_to_order_items($item, $cart_item_key, $values, $order)
     if (isset($values['unique_key'])) {
         $item->add_meta_data('_unique_key', $values['unique_key'], true);
     }
+    if (isset($values['part_of_box'])) {
+        $item->add_meta_data('_part_of_box', $values['part_of_box'], true);
+    }
+    if (isset($values['parent_item_key'])) {
+        $item->add_meta_data('_parent_item_key', $values['parent_item_key'], true);
+    }
 
     // Add display metadata
     if (isset($values['custom_product_option'])) {
